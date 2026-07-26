@@ -1,1 +1,17 @@
 AGENTS.md
+
+.env
+.env.*
+config.secret.json
+secrets.json
+*.token
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+cache/
+runtime/
+downloads/

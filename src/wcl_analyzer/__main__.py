@@ -1,4 +1,4 @@
-"""Compatibility entry point for running WRATH from the repository root."""
+"""Module entry point for ``python -m wcl_analyzer``."""
 
 from wcl_analyzer.main import main
 
