@@ -24,6 +24,18 @@ Run the tests with:
 uv run pytest
 ```
 
+## Checking a public WCL report
+
+Create a Warcraft Logs v2 API client, then provide its credentials as
+environment variables. Do not commit or log these values.
+
+```bash
+export WCL_CLIENT_ID='your-client-id'
+export WCL_CLIENT_SECRET='your-client-secret'
+uv run python scripts/check_wcl_report.py \
+  'https://www.warcraftlogs.com/reports/REPORT_CODE'
+```
+
 ## Source layout
 
 ```text
