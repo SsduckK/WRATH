@@ -11,3 +11,11 @@ class ReportRepository(Protocol):
     def get_report(self, report_code: str) -> Report:
         """Return a report identified by its normalized code."""
         ...
+
+
+class ReportLoader(Protocol):
+    """Application use case exposed to presentation layers."""
+
+    def load_report(self, report_input: str) -> Report:
+        """Load a report from a code or supported URL."""
+        ...

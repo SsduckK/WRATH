@@ -1,32 +1,152 @@
 """Main application window."""
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt, QThread
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from wcl_analyzer.app import ReportLoader
+from wcl_analyzer.domain import Fight, Report
+from wcl_analyzer.gui.workers import ReportLoadWorker
 
 
 class MainWindow(QMainWindow):
     """Top-level window for the WRATH desktop application."""
 
-    def __init__(self) -> None:
+    def __init__(self, report_loader: ReportLoader) -> None:
         super().__init__()
+        self._report_loader = report_loader
+        self._load_thread: QThread | None = None
+        self._load_worker: ReportLoadWorker | None = None
+
         self.setObjectName("mainWindow")
         self.setWindowTitle("WRATH")
         self.resize(960, 640)
 
-        title_label = QLabel("WRATH")
-        title_label.setObjectName("titleLabel")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label = QLabel("WRATH")
+        self.title_label.setObjectName("titleLabel")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        status_label = QLabel("Warcraft Logs 분석 도구를 준비하고 있습니다.")
-        status_label.setObjectName("statusLabel")
-        status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.report_input = QLineEdit()
+        self.report_input.setObjectName("reportInput")
+        self.report_input.setPlaceholderText("WCL report URL 또는 code")
+        self.report_input.returnPressed.connect(self.load_report)
+
+        self.load_button = QPushButton("불러오기")
+        self.load_button.setObjectName("loadButton")
+        self.load_button.clicked.connect(self.load_report)
+
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(self.report_input)
+        input_layout.addWidget(self.load_button)
+
+        self.fight_combo = QComboBox()
+        self.fight_combo.setObjectName("fightCombo")
+        self.fight_combo.setEnabled(False)
+        self.fight_combo.activated.connect(self.print_selected_fight)
+
+        self.status_label = QLabel("WCL report URL 또는 code를 입력하세요.")
+        self.status_label.setObjectName("statusLabel")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QVBoxLayout()
-        layout.addStretch()
-        layout.addWidget(title_label)
-        layout.addWidget(status_label)
-        layout.addStretch()
+        layout.addWidget(self.title_label)
+        layout.addLayout(input_layout)
+        layout.addWidget(self.fight_combo)
+        layout.addWidget(self.status_label)
+        layout.addStretch(1)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
+
+    def load_report(self) -> None:
+        """Start loading the entered report on a worker thread."""
+        report_input = self.report_input.text().strip()
+        if not report_input:
+            self.status_label.setText("WCL report URL 또는 code를 입력하세요.")
+            return
+        if self._load_thread is not None:
+            return
+
+        self.load_button.setEnabled(False)
+        self.report_input.setEnabled(False)
+        self.fight_combo.clear()
+        self.fight_combo.setEnabled(False)
+        self.status_label.setText("리포트를 불러오는 중입니다...")
+
+        thread = QThread(self)
+        worker = ReportLoadWorker(self._report_loader, report_input)
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.loaded.connect(self._show_report)
+        worker.failed.connect(self._show_load_error)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._finish_report_load)
+
+        self._load_thread = thread
+        self._load_worker = worker
+        thread.start()
+
+    def _show_report(self, report_value: object) -> None:
+        """Populate the fight selector from a loaded domain report."""
+        if not isinstance(report_value, Report):
+            self._show_load_error("올바르지 않은 리포트 데이터입니다.")
+            return
+
+        self.fight_combo.blockSignals(True)
+        self.fight_combo.clear()
+        for fight in report_value.fights:
+            self.fight_combo.addItem(self._format_fight(fight), userData=fight)
+        self.fight_combo.blockSignals(False)
+
+        has_fights = self.fight_combo.count() > 0
+        self.fight_combo.setEnabled(has_fights)
+        if has_fights:
+            self.fight_combo.setCurrentIndex(0)
+            self.status_label.setText(
+                f"{report_value.title}: {len(report_value.fights)}개 전투"
+            )
+        else:
+            self.status_label.setText(f"{report_value.title}: 전투가 없습니다.")
+
+    def _show_load_error(self, message: str) -> None:
+        """Display a report-loading failure without closing the application."""
+        self.fight_combo.clear()
+        self.fight_combo.setEnabled(False)
+        self.status_label.setText(f"리포트 로드 실패: {message}")
+
+    def _finish_report_load(self) -> None:
+        """Restore controls after the worker thread has stopped."""
+        self._load_thread = None
+        self._load_worker = None
+        self.load_button.setEnabled(True)
+        self.report_input.setEnabled(True)
+
+    def print_selected_fight(self, index: int) -> None:
+        """Print the Fight selected by the user."""
+        fight = self.fight_combo.itemData(index)
+        if not isinstance(fight, Fight):
+            return
+        print(
+            "Selected fight: "
+            f"id={fight.id}, name={fight.name}, "
+            f"start={fight.start_time_ms} ms, "
+            f"end={fight.end_time_ms} ms, "
+            f"duration={fight.duration_ms} ms"
+        )
+
+    @staticmethod
+    def _format_fight(fight: Fight) -> str:
+        duration_seconds = fight.duration_ms / 1_000
+        return f"{fight.id}. {fight.name} ({duration_seconds:.1f}초)"

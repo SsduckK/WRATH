@@ -36,6 +36,15 @@ uv run python scripts/check_wcl_report.py \
   'https://www.warcraftlogs.com/reports/REPORT_CODE'
 ```
 
+The same environment variables are used by the GUI:
+
+```bash
+uv run wrath
+```
+
+Enter a report URL or code and select **불러오기**. Report loading runs on a
+worker thread; the returned fights are shown in the fight selector.
+
 ## Source layout
 
 ```text
