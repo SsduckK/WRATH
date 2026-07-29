@@ -1,0 +1,47 @@
+"""WCL implementation of the application report repository."""
+
+from collections.abc import Mapping
+from typing import Protocol
+
+from wcl_analyzer.domain import Report
+from wcl_analyzer.infrastructure.wcl.mapper import map_report_response
+from wcl_analyzer.infrastructure.wcl.queries import REPORT_WITH_FIGHTS_QUERY
+
+
+class GraphqlClient(Protocol):
+    """Minimal GraphQL client capability required by this repository."""
+
+    def execute(
+        self,
+        *,
+        query: str,
+        variables: Mapping[str, object],
+    ) -> Mapping[str, object]:
+        """Execute a GraphQL document and return its decoded response."""
+        ...
+
+
+class WclRepositoryError(ValueError):
+    """Raised when WCL returns data inconsistent with the request."""
+
+
+class WclReportRepository:
+    """Load WCL report metadata and map it to domain models."""
+
+    def __init__(self, client: GraphqlClient) -> None:
+        self._client = client
+
+    def get_report(self, report_code: str) -> Report:
+        """Request one report and its fight list from WCL."""
+        payload = self._client.execute(
+            query=REPORT_WITH_FIGHTS_QUERY,
+            variables={"code": report_code},
+        )
+        report = map_report_response(payload)
+
+        if report.code != report_code:
+            raise WclRepositoryError(
+                "WCL response report code does not match the requested code"
+            )
+
+        return report

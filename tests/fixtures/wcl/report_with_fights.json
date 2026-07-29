@@ -1,0 +1,36 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "FakeReport123",
+        "title": "Fixture Raid Night",
+        "visibility": "public",
+        "unknownReportField": "ignored",
+        "fights": [
+          {
+            "id": 1,
+            "name": "First Encounter",
+            "startTime": 1000.0,
+            "endTime": 61000.0,
+            "kill": true,
+            "encounterID": 101,
+            "unknownFightField": {
+              "ignored": true
+            }
+          },
+          {
+            "id": 2,
+            "name": "Second Encounter",
+            "startTime": 90000.0,
+            "endTime": 210000.0,
+            "kill": false,
+            "encounterID": 202
+          }
+        ]
+      }
+    }
+  },
+  "extensions": {
+    "ignored": true
+  }
+}
