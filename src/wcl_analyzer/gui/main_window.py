@@ -18,8 +18,6 @@ from wcl_analyzer.app import (
     ApiRateLimitStatus,
     ReportLoader,
     ReportLoadResult,
-    TokenStatus,
-    TokenStatusProvider,
 )
 from wcl_analyzer.domain import Fight
 from wcl_analyzer.gui.workers import ReportLoadWorker
@@ -28,14 +26,9 @@ from wcl_analyzer.gui.workers import ReportLoadWorker
 class MainWindow(QMainWindow):
     """Top-level window for the WRATH desktop application."""
 
-    def __init__(
-        self,
-        report_loader: ReportLoader,
-        token_status_provider: TokenStatusProvider,
-    ) -> None:
+    def __init__(self, report_loader: ReportLoader) -> None:
         super().__init__()
         self._report_loader = report_loader
-        self._token_status_provider = token_status_provider
         self._load_thread: QThread | None = None
         self._load_worker: ReportLoadWorker | None = None
         self._rate_limit_status: ApiRateLimitStatus | None = None
@@ -71,20 +64,13 @@ class MainWindow(QMainWindow):
         self.status_label.setObjectName("statusLabel")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.token_status_label = QLabel()
-        self.token_status_label.setObjectName("tokenStatusLabel")
-
         self.rate_limit_label = QLabel("API 포인트: 조회 전")
         self.rate_limit_label.setObjectName("rateLimitLabel")
-
-        api_status_layout = QHBoxLayout()
-        api_status_layout.addWidget(self.token_status_label)
-        api_status_layout.addStretch(1)
-        api_status_layout.addWidget(self.rate_limit_label)
+        self.rate_limit_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         layout = QVBoxLayout()
         layout.addWidget(self.title_label)
-        layout.addLayout(api_status_layout)
+        layout.addWidget(self.rate_limit_label)
         layout.addLayout(input_layout)
         layout.addWidget(self.fight_combo)
         layout.addWidget(self.status_label)
@@ -96,9 +82,8 @@ class MainWindow(QMainWindow):
 
         self._status_timer = QTimer(self)
         self._status_timer.setInterval(1_000)
-        self._status_timer.timeout.connect(self._update_api_status)
+        self._status_timer.timeout.connect(self._update_rate_limit_status)
         self._status_timer.start()
-        self._update_api_status()
 
     def load_report(self) -> None:
         """Start loading the entered report on a worker thread."""
@@ -158,7 +143,7 @@ class MainWindow(QMainWindow):
             )
         else:
             self.status_label.setText(f"{report.title}: 전투가 없습니다.")
-        self._update_api_status()
+        self._update_rate_limit_status()
 
     def _show_load_error(self, message: str) -> None:
         """Display a report-loading failure without closing the application."""
@@ -186,11 +171,8 @@ class MainWindow(QMainWindow):
             f"duration={fight.duration_ms} ms"
         )
 
-    def _update_api_status(self) -> None:
-        """Refresh local token and rate-limit countdown labels."""
-        self.token_status_label.setText(
-            self._format_token_status(self._token_status_provider.get_status())
-        )
+    def _update_rate_limit_status(self) -> None:
+        """Refresh the local rate-limit countdown without an API request."""
         self.rate_limit_label.setText(self._format_rate_limit_status())
 
     def _format_rate_limit_status(self) -> str:
@@ -205,24 +187,6 @@ class MainWindow(QMainWindow):
             f"API 포인트: {status.points_remaining:,.1f} / "
             f"{status.limit_per_hour:,} · "
             f"초기화 {self._format_duration(reset_remaining)} 후"
-        )
-
-    @classmethod
-    def _format_token_status(cls, status: TokenStatus) -> str:
-        if status.remaining_seconds is None:
-            return "인증 토큰: 발급 전"
-        if not status.available:
-            return "인증 토큰: 갱신 필요"
-
-        expiration = (
-            status.expires_at.astimezone().strftime("%Y-%m-%d %H:%M:%S")
-            if status.expires_at is not None
-            else "-"
-        )
-        return (
-            "인증 토큰: 사용 가능 · "
-            f"{cls._format_duration(status.remaining_seconds)} 남음 "
-            f"(만료 {expiration})"
         )
 
     @staticmethod

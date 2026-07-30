@@ -1,13 +1,10 @@
 """GUI tests for background report loading and fight selection."""
 
-from datetime import UTC, datetime
-
 from PyQt6.QtCore import Qt, QThread
 
 from wcl_analyzer.app import (
     ApiRateLimitStatus,
     ReportLoadResult,
-    TokenStatus,
 )
 from wcl_analyzer.domain import Fight, Report
 from wcl_analyzer.gui.main_window import MainWindow
@@ -33,17 +30,6 @@ class FakeReportLoader:
             raise self.error
         assert self.result is not None
         return self.result
-
-
-class FakeTokenStatusProvider:
-    """Return a stable token status for GUI formatting tests."""
-
-    def get_status(self) -> TokenStatus:
-        return TokenStatus(
-            available=True,
-            expires_at=datetime(2026, 7, 30, 12, 0, tzinfo=UTC),
-            remaining_seconds=3_125,
-        )
 
 
 def make_report() -> Report:
@@ -83,7 +69,7 @@ def make_result() -> ReportLoadResult:
 
 def test_load_report_populates_fight_combo_from_worker_thread(qtbot, qapp) -> None:
     loader = FakeReportLoader(result=make_result())
-    window = MainWindow(loader, FakeTokenStatusProvider())
+    window = MainWindow(loader)
     qtbot.addWidget(window)
     window.show()
     window.report_input.setText(
@@ -104,14 +90,10 @@ def test_load_report_populates_fight_combo_from_worker_thread(qtbot, qapp) -> No
     assert window.fight_combo.itemData(1) == make_report().fights[1]
     assert "2개 전투" in window.status_label.text()
     assert "3,482.5 / 3,600" in window.rate_limit_label.text()
-    assert "52분 5초" in window.token_status_label.text()
 
 
 def test_user_fight_selection_prints_selected_fight(qtbot, capsys) -> None:
-    window = MainWindow(
-        FakeReportLoader(result=make_result()),
-        FakeTokenStatusProvider(),
-    )
+    window = MainWindow(FakeReportLoader(result=make_result()))
     qtbot.addWidget(window)
     window.report_input.setText("FakeReport123")
     qtbot.mouseClick(window.load_button, Qt.MouseButton.LeftButton)
@@ -128,7 +110,7 @@ def test_user_fight_selection_prints_selected_fight(qtbot, capsys) -> None:
 
 def test_load_error_is_presented_and_controls_are_restored(qtbot) -> None:
     loader = FakeReportLoader(error=RuntimeError("network unavailable"))
-    window = MainWindow(loader, FakeTokenStatusProvider())
+    window = MainWindow(loader)
     qtbot.addWidget(window)
     window.report_input.setText("FakeReport123")
 
@@ -139,7 +121,3 @@ def test_load_error_is_presented_and_controls_are_restored(qtbot) -> None:
     assert not window.fight_combo.isEnabled()
     assert "network unavailable" in window.status_label.text()
     assert window.report_input.isEnabled()
-
-
-def test_long_token_lifetime_is_formatted_as_days() -> None:
-    assert MainWindow._format_duration(31_103_986) == "359일 23시간 59분"
