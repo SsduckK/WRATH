@@ -128,6 +128,25 @@ def test_user_fight_selection_prints_selected_fight(qtbot, capsys) -> None:
     assert "Alpha" not in output
 
 
+def test_player_list_updates_and_click_prints_player(qtbot, capsys) -> None:
+    window = MainWindow(FakeReportLoader(result=make_result()))
+    qtbot.addWidget(window)
+    window.report_input.setText("FakeReport123")
+    qtbot.mouseClick(window.load_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: window.participant_table.model().rowCount() == 2)
+
+    window.fight_combo.setCurrentIndex(1)
+    window.fight_combo.activated.emit(1)
+    model = window.participant_table.model()
+    assert model.rowCount() == 1
+    assert model.data(model.index(0, 0)) == "Beta"
+
+    capsys.readouterr()
+    window.participant_table.clicked.emit(model.index(0, 0))
+
+    assert capsys.readouterr().out == "player{Beta} clicked\n"
+
+
 def test_load_error_is_presented_and_controls_are_restored(qtbot) -> None:
     loader = FakeReportLoader(error=RuntimeError("network unavailable"))
     window = MainWindow(loader)

@@ -2,9 +2,13 @@
 
 from PyQt6.QtWidgets import QWidget
 
-from wcl_analyzer.domain import Fight
+from wcl_analyzer.domain import Actor, Fight
 from wcl_analyzer.gui.actions import AppActions
-from wcl_analyzer.gui.widgets import AppButton, FightSelector
+from wcl_analyzer.gui.widgets import (
+    AppButton,
+    FightSelector,
+    ParticipantTableView,
+)
 
 
 def test_app_button_synchronizes_with_bound_action(qtbot) -> None:
@@ -57,3 +61,26 @@ def test_fight_selector_stores_models_and_emits_selection(qtbot) -> None:
     assert selector.itemText(0) == "3. Test Encounter (60.0초)"
     assert selector.itemData(0) is fight
     assert selected == [fight]
+
+
+def test_participant_table_displays_and_emits_clicked_actor(qtbot) -> None:
+    table = ParticipantTableView()
+    qtbot.addWidget(table)
+    actor = Actor(
+        id=101,
+        name="Alpha",
+        actor_type="Player",
+        sub_type="Warrior",
+    )
+    clicked: list[object] = []
+    table.player_clicked.connect(clicked.append)
+
+    table.set_participants((actor,))
+    model = table.model()
+    first_cell = model.index(0, 0)
+    table.clicked.emit(first_cell)
+
+    assert model.rowCount() == 1
+    assert model.data(first_cell) == "Alpha"
+    assert model.data(model.index(0, 1)) == "Warrior"
+    assert clicked == [actor]

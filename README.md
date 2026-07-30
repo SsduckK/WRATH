@@ -46,8 +46,9 @@ Enter a report URL or code and select **불러오기**. Report loading runs on a
 worker thread; the returned fights are shown in the fight selector. The GUI
 also shows the latest WCL API point balance returned with the report query.
 The reset countdown updates locally and does not make additional API requests.
-Selecting a fight prints the friendly player list resolved from WCL report
-master data to the development console.
+Selecting a fight displays its friendly players in a table resolved from WCL
+report master data. Clicking a player row prints the selected player name to
+the development console.
 
 ## Source layout
 

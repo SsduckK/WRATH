@@ -2,11 +2,19 @@
 
 from collections.abc import Iterable
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QComboBox, QPushButton, QWidget
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QHeaderView,
+    QPushButton,
+    QTableView,
+    QWidget,
+)
 
-from wcl_analyzer.domain import Fight
+from wcl_analyzer.domain import Actor, Fight
+from wcl_analyzer.gui.models import ParticipantTableModel
 
 
 class AppButton(QPushButton):
@@ -77,3 +85,40 @@ class FightSelector(QComboBox):
     def _format_fight(fight: Fight) -> str:
         duration_seconds = fight.duration_ms / 1_000
         return f"{fight.id}. {fight.name} ({duration_seconds:.1f}초)"
+
+
+class ParticipantTableView(QTableView):
+    """Display fight participants and emit a clicked Actor."""
+
+    player_clicked = pyqtSignal(object)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("participantTable")
+        self._participant_model = ParticipantTableModel()
+        self.setModel(self._participant_model)
+        self.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.verticalHeader().setVisible(False)
+        self.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.clicked.connect(self._emit_clicked_player)
+
+    def set_participants(self, participants: Iterable[Actor]) -> None:
+        """Replace the displayed player list."""
+        self._participant_model.set_participants(participants)
+
+    def clear_participants(self) -> None:
+        """Remove every displayed player."""
+        self._participant_model.set_participants(())
+
+    def _emit_clicked_player(self, index: QModelIndex) -> None:
+        actor = self._participant_model.actor_at(index.row())
+        if actor is not None:
+            self.player_clicked.emit(actor)

@@ -17,9 +17,13 @@ from wcl_analyzer.app import (
     ReportLoader,
     ReportLoadResult,
 )
-from wcl_analyzer.domain import Fight, Report
+from wcl_analyzer.domain import Actor, Fight, Report
 from wcl_analyzer.gui.actions import AppActions
-from wcl_analyzer.gui.widgets import AppButton, FightSelector
+from wcl_analyzer.gui.widgets import (
+    AppButton,
+    FightSelector,
+    ParticipantTableView,
+)
 from wcl_analyzer.gui.workers import ReportLoadWorker
 
 
@@ -63,6 +67,11 @@ class MainWindow(QMainWindow):
         self.fight_combo = FightSelector()
         self.fight_combo.fight_selected.connect(self.print_selected_fight)
 
+        self.participant_table = ParticipantTableView()
+        self.participant_table.player_clicked.connect(
+            self.print_clicked_player
+        )
+
         self.status_label = QLabel("WCL report URL 또는 code를 입력하세요.")
         self.status_label.setObjectName("statusLabel")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -76,8 +85,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.rate_limit_label)
         layout.addLayout(input_layout)
         layout.addWidget(self.fight_combo)
+        layout.addWidget(self.participant_table, 1)
         layout.addWidget(self.status_label)
-        layout.addStretch(1)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)
@@ -100,6 +109,7 @@ class MainWindow(QMainWindow):
         self.actions.load_report.setEnabled(False)
         self.report_input.setEnabled(False)
         self.fight_combo.clear_fights()
+        self.participant_table.clear_participants()
         self.status_label.setText("리포트를 불러오는 중입니다...")
 
         thread = QThread(self)
@@ -134,10 +144,12 @@ class MainWindow(QMainWindow):
         self.fight_combo.set_fights(report.fights)
         has_fights = bool(report.fights)
         if has_fights:
+            self._show_fight_participants(report.fights[0])
             self.status_label.setText(
                 f"{report.title}: {len(report.fights)}개 전투"
             )
         else:
+            self.participant_table.clear_participants()
             self.status_label.setText(f"{report.title}: 전투가 없습니다.")
         self._update_rate_limit_status()
 
@@ -145,6 +157,7 @@ class MainWindow(QMainWindow):
         """Display a report-loading failure without closing the application."""
         self._current_report = None
         self.fight_combo.clear_fights()
+        self.participant_table.clear_participants()
         self.status_label.setText(f"리포트 로드 실패: {message}")
 
     def _finish_report_load(self) -> None:
@@ -159,6 +172,7 @@ class MainWindow(QMainWindow):
         if not isinstance(fight_value, Fight):
             return
         fight = fight_value
+        participants = self._show_fight_participants(fight)
         print(
             "Selected fight: "
             f"id={fight.id}, name={fight.name}, "
@@ -166,15 +180,26 @@ class MainWindow(QMainWindow):
             f"end={fight.end_time_ms} ms, "
             f"duration={fight.duration_ms} ms"
         )
+        print(f"Participants ({len(participants)}):")
+        for actor in participants:
+            detail = f" · {actor.sub_type}" if actor.sub_type else ""
+            print(f"- {actor.name} (report actor id={actor.id}{detail})")
+
+    def _show_fight_participants(self, fight: Fight) -> tuple[Actor, ...]:
+        """Resolve and display the selected fight's friendly players."""
         participants = (
             self._current_report.get_fight_participants(fight)
             if self._current_report is not None
             else ()
         )
-        print(f"Participants ({len(participants)}):")
-        for actor in participants:
-            detail = f" · {actor.sub_type}" if actor.sub_type else ""
-            print(f"- {actor.name} (report actor id={actor.id}{detail})")
+        self.participant_table.set_participants(participants)
+        return participants
+
+    @staticmethod
+    def print_clicked_player(player_value: object) -> None:
+        """Print the clicked player for the current interaction prototype."""
+        if isinstance(player_value, Actor):
+            print(f"player{{{player_value.name}}} clicked")
 
     def _update_rate_limit_status(self) -> None:
         """Refresh the local rate-limit countdown without an API request."""
