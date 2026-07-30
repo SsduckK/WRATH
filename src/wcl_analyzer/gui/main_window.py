@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -20,6 +19,8 @@ from wcl_analyzer.app import (
     ReportLoadResult,
 )
 from wcl_analyzer.domain import Fight
+from wcl_analyzer.gui.actions import AppActions
+from wcl_analyzer.gui.widgets import AppButton
 from wcl_analyzer.gui.workers import ReportLoadWorker
 
 
@@ -38,6 +39,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("WRATH")
         self.resize(960, 640)
 
+        self.actions = AppActions(self)
+        self.actions.load_report.triggered.connect(self.load_report)
+
         self.title_label = QLabel("WRATH")
         self.title_label.setObjectName("titleLabel")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -45,11 +49,12 @@ class MainWindow(QMainWindow):
         self.report_input = QLineEdit()
         self.report_input.setObjectName("reportInput")
         self.report_input.setPlaceholderText("WCL report URL 또는 code")
-        self.report_input.returnPressed.connect(self.load_report)
+        self.report_input.returnPressed.connect(self.actions.load_report.trigger)
 
-        self.load_button = QPushButton("불러오기")
-        self.load_button.setObjectName("loadButton")
-        self.load_button.clicked.connect(self.load_report)
+        self.load_button = AppButton(
+            self.actions.load_report,
+            object_name="loadButton",
+        )
 
         input_layout = QHBoxLayout()
         input_layout.addWidget(self.report_input)
@@ -94,7 +99,7 @@ class MainWindow(QMainWindow):
         if self._load_thread is not None:
             return
 
-        self.load_button.setEnabled(False)
+        self.actions.load_report.setEnabled(False)
         self.report_input.setEnabled(False)
         self.fight_combo.clear()
         self.fight_combo.setEnabled(False)
@@ -155,7 +160,7 @@ class MainWindow(QMainWindow):
         """Restore controls after the worker thread has stopped."""
         self._load_thread = None
         self._load_worker = None
-        self.load_button.setEnabled(True)
+        self.actions.load_report.setEnabled(True)
         self.report_input.setEnabled(True)
 
     def print_selected_fight(self, index: int) -> None:
