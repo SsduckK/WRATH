@@ -20,7 +20,8 @@ def main() -> int:
     client = WclGraphqlClient(token_provider)
     repository = WclReportRepository(client)
     service = ReportService(repository)
-    report = service.load_report(arguments.report)
+    result = service.load_report(arguments.report)
+    report = result.report
 
     print(f"Report: {report.title} ({report.code})")
     for fight in report.fights:
@@ -28,6 +29,14 @@ def main() -> int:
             f"{fight.id}: {fight.name} "
             f"[{fight.start_time_ms}-{fight.end_time_ms} ms, "
             f"duration={fight.duration_ms} ms]"
+        )
+    if result.rate_limit is not None:
+        rate_limit = result.rate_limit
+        print(
+            "API points: "
+            f"{rate_limit.points_remaining:.1f}/"
+            f"{rate_limit.limit_per_hour}, "
+            f"reset in {rate_limit.reset_in_seconds}s"
         )
     return 0
 

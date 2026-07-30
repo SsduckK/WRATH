@@ -4,6 +4,7 @@ import pytest
 
 from wcl_analyzer.app import (
     InvalidReportInputError,
+    ReportLoadResult,
     ReportService,
     normalize_report_code,
 )
@@ -14,12 +15,12 @@ class FakeReportRepository:
     """In-memory repository used to isolate application-service tests."""
 
     def __init__(self, report: Report) -> None:
-        self.report = report
+        self.result = ReportLoadResult(report=report)
         self.requested_codes: list[str] = []
 
-    def get_report(self, report_code: str) -> Report:
+    def get_report(self, report_code: str) -> ReportLoadResult:
         self.requested_codes.append(report_code)
-        return self.report
+        return self.result
 
 
 @pytest.mark.parametrize(
@@ -80,9 +81,9 @@ def test_load_report_normalizes_input_and_delegates_to_repository() -> None:
     repository = FakeReportRepository(report)
     service = ReportService(repository)
 
-    loaded_report = service.load_report(
+    result = service.load_report(
         "https://www.warcraftlogs.com/reports/AbCd1234#fight=1"
     )
 
-    assert loaded_report is report
+    assert result.report is report
     assert repository.requested_codes == ["AbCd1234"]

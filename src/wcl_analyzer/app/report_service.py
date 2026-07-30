@@ -3,8 +3,8 @@
 from urllib.parse import urlsplit
 
 from wcl_analyzer.app.errors import InvalidReportInputError
+from wcl_analyzer.app.models import ReportLoadResult
 from wcl_analyzer.app.ports import ReportRepository
-from wcl_analyzer.domain import Report
 
 _WCL_HOST = "warcraftlogs.com"
 
@@ -50,7 +50,7 @@ class ReportService:
     def __init__(self, repository: ReportRepository) -> None:
         self._repository = repository
 
-    def load_report(self, report_input: str) -> Report:
+    def load_report(self, report_input: str) -> ReportLoadResult:
         """Load report metadata for a code or Warcraft Logs URL."""
         report_code = normalize_report_code(report_input)
         return self._repository.get_report(report_code)

@@ -3,11 +3,15 @@
 import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from time import monotonic
 
 import requests
 
+from wcl_analyzer.app import TokenStatus
+
 WCL_TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
+TOKEN_REFRESH_MARGIN_SECONDS = 30.0
 
 
 class WclAuthenticationError(RuntimeError):
@@ -34,6 +38,7 @@ class WclTokenProvider:
         token_url: str = WCL_TOKEN_URL,
         timeout_seconds: float = 10.0,
         clock: Callable[[], float] = monotonic,
+        wall_clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         if not client_id:
             raise WclAuthenticationError("WCL client ID is not configured")
@@ -46,6 +51,7 @@ class WclTokenProvider:
         self._token_url = token_url
         self._timeout_seconds = timeout_seconds
         self._clock = clock
+        self._wall_clock = wall_clock
         self._cached_token: AccessToken | None = None
 
     @classmethod
@@ -108,11 +114,29 @@ class WclTokenProvider:
         """Discard the cached token, normally after an HTTP 401 response."""
         self._cached_token = None
 
+    def get_status(self) -> TokenStatus:
+        """Return token lifetime metadata without exposing the token value."""
+        token = self._cached_token
+        if token is None:
+            return TokenStatus(
+                available=False,
+                expires_at=None,
+                remaining_seconds=None,
+            )
+
+        remaining_seconds = max(0, int(token.expires_at - self._clock()))
+        return TokenStatus(
+            available=remaining_seconds > TOKEN_REFRESH_MARGIN_SECONDS,
+            expires_at=self._wall_clock()
+            + timedelta(seconds=remaining_seconds),
+            remaining_seconds=remaining_seconds,
+        )
+
     def _is_cached_token_valid(self) -> bool:
         token = self._cached_token
         if token is None:
             return False
-        return self._clock() < token.expires_at - 30.0
+        return self._clock() < token.expires_at - TOKEN_REFRESH_MARGIN_SECONDS
 
 
 def _response_mapping(response: requests.Response) -> Mapping[str, object]:

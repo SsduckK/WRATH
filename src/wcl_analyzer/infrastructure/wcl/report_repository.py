@@ -3,9 +3,12 @@
 from collections.abc import Mapping
 from typing import Protocol
 
-from wcl_analyzer.domain import Report
+from wcl_analyzer.app import ReportLoadResult
 from wcl_analyzer.infrastructure.wcl.mapper import map_report_response
 from wcl_analyzer.infrastructure.wcl.queries import REPORT_WITH_FIGHTS_QUERY
+from wcl_analyzer.infrastructure.wcl.rate_limit_mapper import (
+    map_rate_limit_response,
+)
 
 
 class GraphqlClient(Protocol):
@@ -31,7 +34,7 @@ class WclReportRepository:
     def __init__(self, client: GraphqlClient) -> None:
         self._client = client
 
-    def get_report(self, report_code: str) -> Report:
+    def get_report(self, report_code: str) -> ReportLoadResult:
         """Request one report and its fight list from WCL."""
         payload = self._client.execute(
             query=REPORT_WITH_FIGHTS_QUERY,
@@ -44,4 +47,7 @@ class WclReportRepository:
                 "WCL response report code does not match the requested code"
             )
 
-        return report
+        return ReportLoadResult(
+            report=report,
+            rate_limit=map_rate_limit_response(payload),
+        )

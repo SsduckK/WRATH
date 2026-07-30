@@ -44,12 +44,14 @@ def test_get_report_executes_query_with_separate_variables() -> None:
     client = FakeGraphqlClient(load_fixture())
     repository = WclReportRepository(client)
 
-    report = repository.get_report("FakeReport123")
+    result = repository.get_report("FakeReport123")
 
     assert client.queries == [REPORT_WITH_FIGHTS_QUERY]
     assert client.variables == [{"code": "FakeReport123"}]
-    assert report.code == "FakeReport123"
-    assert [fight.id for fight in report.fights] == [1, 2]
+    assert result.report.code == "FakeReport123"
+    assert [fight.id for fight in result.report.fights] == [1, 2]
+    assert result.rate_limit is not None
+    assert result.rate_limit.points_remaining == 3_482.5
 
 
 def test_report_service_loads_fixture_through_wcl_repository() -> None:
@@ -57,12 +59,12 @@ def test_report_service_loads_fixture_through_wcl_repository() -> None:
     repository = WclReportRepository(client)
     service = ReportService(repository)
 
-    report = service.load_report(
+    result = service.load_report(
         "https://www.warcraftlogs.com/reports/FakeReport123#fight=2"
     )
 
-    assert report.title == "Fixture Raid Night"
-    assert report.get_fight(2) is not None
+    assert result.report.title == "Fixture Raid Night"
+    assert result.report.get_fight(2) is not None
     assert client.variables == [{"code": "FakeReport123"}]
 
 

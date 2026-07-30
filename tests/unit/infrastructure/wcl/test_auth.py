@@ -1,6 +1,7 @@
 """Tests for WCL client-credentials token handling."""
 
 from collections.abc import Mapping
+from datetime import UTC, datetime
 
 import pytest
 
@@ -73,6 +74,44 @@ def test_invalidate_forces_new_token_request() -> None:
     assert provider.get_access_token() == "first-token"
     provider.invalidate()
     assert provider.get_access_token() == "second-token"
+
+
+def test_get_status_never_exposes_token_and_uses_monotonic_lifetime() -> None:
+    session = FakeSession(
+        [FakeResponse(200, {"access_token": "secret-token", "expires_in": 120})]
+    )
+    current_time = [1_000.0]
+    provider = WclTokenProvider(
+        "test-client-id",
+        "test-client-secret",
+        session=session,  # type: ignore[arg-type]
+        clock=lambda: current_time[0],
+        wall_clock=lambda: datetime(2026, 7, 30, 12, 0, tzinfo=UTC),
+    )
+
+    unavailable_status = provider.get_status()
+    assert not unavailable_status.available
+    assert unavailable_status.remaining_seconds is None
+
+    provider.get_access_token()
+    current_time[0] += 20
+    available_status = provider.get_status()
+
+    assert available_status.available
+    assert available_status.remaining_seconds == 100
+    assert available_status.expires_at == datetime(
+        2026,
+        7,
+        30,
+        12,
+        1,
+        40,
+        tzinfo=UTC,
+    )
+    assert "secret-token" not in repr(available_status)
+
+    provider.invalidate()
+    assert not provider.get_status().available
 
 
 def test_token_request_rejects_http_failure() -> None:

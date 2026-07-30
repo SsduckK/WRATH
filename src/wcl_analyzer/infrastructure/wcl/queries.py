@@ -14,5 +14,10 @@ query ReportWithFights($code: String!) {
       }
     }
   }
+  rateLimitData {
+    limitPerHour
+    pointsSpentThisHour
+    pointsResetIn
+  }
 }
 """

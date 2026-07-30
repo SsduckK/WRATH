@@ -28,6 +28,11 @@
           }
         ]
       }
+    },
+    "rateLimitData": {
+      "limitPerHour": 3600,
+      "pointsSpentThisHour": 117.5,
+      "pointsResetIn": 1800
     }
   },
   "extensions": {

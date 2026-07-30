@@ -18,7 +18,7 @@ def create_main_window() -> MainWindow:
     graphql_client = WclGraphqlClient(token_provider)
     repository = WclReportRepository(graphql_client)
     report_service = ReportService(repository)
-    return MainWindow(report_service)
+    return MainWindow(report_service, token_provider)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -43,7 +43,10 @@ uv run wrath
 ```
 
 Enter a report URL or code and select **불러오기**. Report loading runs on a
-worker thread; the returned fights are shown in the fight selector.
+worker thread; the returned fights are shown in the fight selector. The GUI
+also shows the current access-token lifetime and the latest WCL API point
+balance returned with the report query. Countdown labels update locally and do
+not make additional API requests.
 
 ## Source layout
 

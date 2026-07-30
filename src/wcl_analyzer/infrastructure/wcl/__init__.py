@@ -15,6 +15,9 @@ from wcl_analyzer.infrastructure.wcl.mapper import (
     WclMappingError,
     map_report_response,
 )
+from wcl_analyzer.infrastructure.wcl.rate_limit_mapper import (
+    map_rate_limit_response,
+)
 from wcl_analyzer.infrastructure.wcl.report_repository import (
     GraphqlClient,
     WclReportRepository,
@@ -33,5 +36,6 @@ __all__ = [
     "WclReportRepository",
     "WclRepositoryError",
     "WclTokenProvider",
+    "map_rate_limit_response",
     "map_report_response",
 ]
