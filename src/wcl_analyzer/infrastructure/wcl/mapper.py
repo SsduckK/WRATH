@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from math import isfinite
 from typing import Never
 
-from wcl_analyzer.domain import Fight, Report
+from wcl_analyzer.domain import Actor, Fight, Report
 
 
 class WclMappingError(ValueError):
@@ -28,6 +28,7 @@ def map_report_response(payload: Mapping[str, object]) -> Report:
     code = _required_string(raw_report, "code", "report")
     title = _required_string(raw_report, "title", "report")
     raw_fights = _required_list(raw_report, "fights", "report")
+    actors = _map_actors(raw_report)
 
     fights = tuple(
         _map_fight(_as_mapping(raw_fight, f"report.fights[{index}]"))
@@ -35,7 +36,7 @@ def map_report_response(payload: Mapping[str, object]) -> Report:
     )
 
     try:
-        return Report(code=code, title=title, fights=fights)
+        return Report(code=code, title=title, fights=fights, actors=actors)
     except ValueError as error:
         raise WclMappingError(f"invalid report data: {error}") from error
 
@@ -45,6 +46,11 @@ def _map_fight(raw_fight: Mapping[str, object]) -> Fight:
     name = _required_string(raw_fight, "name", "fight")
     start_time_ms = _required_millisecond(raw_fight, "startTime", "fight")
     end_time_ms = _required_millisecond(raw_fight, "endTime", "fight")
+    friendly_actor_ids = _optional_int_tuple(
+        raw_fight,
+        "friendlyPlayers",
+        "fight",
+    )
 
     try:
         return Fight(
@@ -52,9 +58,45 @@ def _map_fight(raw_fight: Mapping[str, object]) -> Fight:
             name=name,
             start_time_ms=start_time_ms,
             end_time_ms=end_time_ms,
+            friendly_actor_ids=friendly_actor_ids,
         )
     except ValueError as error:
         raise WclMappingError(f"invalid fight data: {error}") from error
+
+
+def _map_actors(raw_report: Mapping[str, object]) -> tuple[Actor, ...]:
+    raw_master_data = raw_report.get("masterData")
+    if raw_master_data is None:
+        return ()
+    master_data = _as_mapping(raw_master_data, "report.masterData")
+    raw_actors = master_data.get("actors")
+    if raw_actors is None:
+        return ()
+    if not isinstance(raw_actors, list):
+        raise WclMappingError("report.masterData.actors must be a list")
+
+    actors: list[Actor] = []
+    for index, raw_actor_value in enumerate(raw_actors):
+        raw_actor = _as_mapping(
+            raw_actor_value,
+            f"report.masterData.actors[{index}]",
+        )
+        actor_id = _required_int(raw_actor, "id", "actor")
+        name = _required_string(raw_actor, "name", "actor")
+        actor_type = _optional_string(raw_actor, "type") or "Unknown"
+        sub_type = _optional_string(raw_actor, "subType")
+        try:
+            actors.append(
+                Actor(
+                    id=actor_id,
+                    name=name,
+                    actor_type=actor_type,
+                    sub_type=sub_type,
+                )
+            )
+        except ValueError as error:
+            raise WclMappingError(f"invalid actor data: {error}") from error
+    return tuple(actors)
 
 
 def _required_mapping(
@@ -117,6 +159,39 @@ def _required_millisecond(
             f"{location}.{field} must be a whole millisecond value"
         )
     return int(value)
+
+
+def _optional_int_tuple(
+    container: Mapping[str, object],
+    field: str,
+    location: str,
+) -> tuple[int, ...]:
+    value = container.get(field)
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise WclMappingError(f"{location}.{field} must be a list")
+
+    values: list[int] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int):
+            raise WclMappingError(
+                f"{location}.{field} must contain only integers"
+            )
+        values.append(item)
+    return tuple(values)
+
+
+def _optional_string(
+    container: Mapping[str, object],
+    field: str,
+) -> str | None:
+    value = container.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise WclMappingError(f"{field} must be a string or null")
+    return value
 
 
 def _required_value(

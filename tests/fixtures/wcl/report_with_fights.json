@@ -12,6 +12,10 @@
             "name": "First Encounter",
             "startTime": 1000.0,
             "endTime": 61000.0,
+            "friendlyPlayers": [
+              101,
+              102
+            ],
             "kill": true,
             "encounterID": 101,
             "unknownFightField": {
@@ -23,10 +27,29 @@
             "name": "Second Encounter",
             "startTime": 90000.0,
             "endTime": 210000.0,
+            "friendlyPlayers": [
+              102
+            ],
             "kill": false,
             "encounterID": 202
           }
-        ]
+        ],
+        "masterData": {
+          "actors": [
+            {
+              "id": 101,
+              "name": "Alpha",
+              "type": "Player",
+              "subType": "Warrior"
+            },
+            {
+              "id": 102,
+              "name": "Beta",
+              "type": "Player",
+              "subType": "Priest"
+            }
+          ]
+        }
       }
     },
     "rateLimitData": {

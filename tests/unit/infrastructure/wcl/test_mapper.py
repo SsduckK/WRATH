@@ -35,10 +35,18 @@ def test_map_report_response_creates_report_and_fights(
     assert first_fight.start_time_ms == 1_000
     assert first_fight.end_time_ms == 61_000
     assert first_fight.duration_ms == 60_000
+    assert first_fight.friendly_actor_ids == (101, 102)
 
     second_fight = report.fights[1]
     assert second_fight.id == 2
     assert second_fight.duration_ms == 120_000
+    assert second_fight.friendly_actor_ids == (102,)
+
+    assert [(actor.id, actor.name) for actor in report.actors] == [
+        (101, "Alpha"),
+        (102, "Beta"),
+    ]
+    assert report.get_fight_participants(second_fight) == (report.actors[1],)
 
 
 @pytest.mark.parametrize(

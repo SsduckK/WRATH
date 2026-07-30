@@ -4,7 +4,6 @@ from time import monotonic
 
 from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtWidgets import (
-    QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -18,9 +17,9 @@ from wcl_analyzer.app import (
     ReportLoader,
     ReportLoadResult,
 )
-from wcl_analyzer.domain import Fight
+from wcl_analyzer.domain import Fight, Report
 from wcl_analyzer.gui.actions import AppActions
-from wcl_analyzer.gui.widgets import AppButton
+from wcl_analyzer.gui.widgets import AppButton, FightSelector
 from wcl_analyzer.gui.workers import ReportLoadWorker
 
 
@@ -32,6 +31,7 @@ class MainWindow(QMainWindow):
         self._report_loader = report_loader
         self._load_thread: QThread | None = None
         self._load_worker: ReportLoadWorker | None = None
+        self._current_report: Report | None = None
         self._rate_limit_status: ApiRateLimitStatus | None = None
         self._rate_limit_captured_at: float | None = None
 
@@ -60,10 +60,8 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.report_input)
         input_layout.addWidget(self.load_button)
 
-        self.fight_combo = QComboBox()
-        self.fight_combo.setObjectName("fightCombo")
-        self.fight_combo.setEnabled(False)
-        self.fight_combo.activated.connect(self.print_selected_fight)
+        self.fight_combo = FightSelector()
+        self.fight_combo.fight_selected.connect(self.print_selected_fight)
 
         self.status_label = QLabel("WCL report URL 또는 code를 입력하세요.")
         self.status_label.setObjectName("statusLabel")
@@ -101,8 +99,7 @@ class MainWindow(QMainWindow):
 
         self.actions.load_report.setEnabled(False)
         self.report_input.setEnabled(False)
-        self.fight_combo.clear()
-        self.fight_combo.setEnabled(False)
+        self.fight_combo.clear_fights()
         self.status_label.setText("리포트를 불러오는 중입니다...")
 
         thread = QThread(self)
@@ -128,21 +125,15 @@ class MainWindow(QMainWindow):
             return
 
         report = result_value.report
+        self._current_report = report
         self._rate_limit_status = result_value.rate_limit
         self._rate_limit_captured_at = (
             monotonic() if result_value.rate_limit is not None else None
         )
 
-        self.fight_combo.blockSignals(True)
-        self.fight_combo.clear()
-        for fight in report.fights:
-            self.fight_combo.addItem(self._format_fight(fight), userData=fight)
-        self.fight_combo.blockSignals(False)
-
-        has_fights = self.fight_combo.count() > 0
-        self.fight_combo.setEnabled(has_fights)
+        self.fight_combo.set_fights(report.fights)
+        has_fights = bool(report.fights)
         if has_fights:
-            self.fight_combo.setCurrentIndex(0)
             self.status_label.setText(
                 f"{report.title}: {len(report.fights)}개 전투"
             )
@@ -152,8 +143,8 @@ class MainWindow(QMainWindow):
 
     def _show_load_error(self, message: str) -> None:
         """Display a report-loading failure without closing the application."""
-        self.fight_combo.clear()
-        self.fight_combo.setEnabled(False)
+        self._current_report = None
+        self.fight_combo.clear_fights()
         self.status_label.setText(f"리포트 로드 실패: {message}")
 
     def _finish_report_load(self) -> None:
@@ -163,11 +154,11 @@ class MainWindow(QMainWindow):
         self.actions.load_report.setEnabled(True)
         self.report_input.setEnabled(True)
 
-    def print_selected_fight(self, index: int) -> None:
-        """Print the Fight selected by the user."""
-        fight = self.fight_combo.itemData(index)
-        if not isinstance(fight, Fight):
+    def print_selected_fight(self, fight_value: object) -> None:
+        """Print the selected Fight and its friendly player list."""
+        if not isinstance(fight_value, Fight):
             return
+        fight = fight_value
         print(
             "Selected fight: "
             f"id={fight.id}, name={fight.name}, "
@@ -175,6 +166,15 @@ class MainWindow(QMainWindow):
             f"end={fight.end_time_ms} ms, "
             f"duration={fight.duration_ms} ms"
         )
+        participants = (
+            self._current_report.get_fight_participants(fight)
+            if self._current_report is not None
+            else ()
+        )
+        print(f"Participants ({len(participants)}):")
+        for actor in participants:
+            detail = f" · {actor.sub_type}" if actor.sub_type else ""
+            print(f"- {actor.name} (report actor id={actor.id}{detail})")
 
     def _update_rate_limit_status(self) -> None:
         """Refresh the local rate-limit countdown without an API request."""
@@ -206,8 +206,3 @@ class MainWindow(QMainWindow):
         if minutes:
             return f"{minutes}분 {seconds}초"
         return f"{seconds}초"
-
-    @staticmethod
-    def _format_fight(fight: Fight) -> str:
-        duration_seconds = fight.duration_ms / 1_000
-        return f"{fight.id}. {fight.name} ({duration_seconds:.1f}초)"

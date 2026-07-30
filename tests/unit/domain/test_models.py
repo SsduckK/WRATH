@@ -2,7 +2,7 @@
 
 import pytest
 
-from wcl_analyzer.domain import Fight, Report
+from wcl_analyzer.domain import Actor, Fight, Report
 
 
 def test_fight_exposes_report_relative_duration() -> None:
@@ -98,3 +98,36 @@ def test_report_rejects_duplicate_report_local_fight_ids() -> None:
             title="Test Report",
             fights=(first_fight, duplicate_id_fight),
         )
+
+
+def test_report_resolves_fight_participants_in_fight_order() -> None:
+    first_actor = Actor(
+        id=101,
+        name="Alpha",
+        actor_type="Player",
+        sub_type="Warrior",
+    )
+    second_actor = Actor(
+        id=102,
+        name="Beta",
+        actor_type="Player",
+        sub_type="Priest",
+    )
+    fight = Fight(
+        id=1,
+        name="Test Encounter",
+        start_time_ms=0,
+        end_time_ms=1_000,
+        friendly_actor_ids=(102, 999, 101),
+    )
+    report = Report(
+        code="ABC123",
+        title="Test Report",
+        fights=(fight,),
+        actors=(first_actor, second_actor),
+    )
+
+    assert report.get_fight_participants(fight) == (
+        second_actor,
+        first_actor,
+    )

@@ -6,7 +6,7 @@ from wcl_analyzer.app import (
     ApiRateLimitStatus,
     ReportLoadResult,
 )
-from wcl_analyzer.domain import Fight, Report
+from wcl_analyzer.domain import Actor, Fight, Report
 from wcl_analyzer.gui.main_window import MainWindow
 
 
@@ -43,12 +43,28 @@ def make_report() -> Report:
                 name="First Encounter",
                 start_time_ms=1_000,
                 end_time_ms=61_000,
+                friendly_actor_ids=(101, 102),
             ),
             Fight(
                 id=2,
                 name="Second Encounter",
                 start_time_ms=90_000,
                 end_time_ms=210_000,
+                friendly_actor_ids=(102,),
+            ),
+        ),
+        actors=(
+            Actor(
+                id=101,
+                name="Alpha",
+                actor_type="Player",
+                sub_type="Warrior",
+            ),
+            Actor(
+                id=102,
+                name="Beta",
+                actor_type="Player",
+                sub_type="Priest",
             ),
         ),
     )
@@ -106,6 +122,10 @@ def test_user_fight_selection_prints_selected_fight(qtbot, capsys) -> None:
     assert "id=2" in output
     assert "name=Second Encounter" in output
     assert "duration=120000 ms" in output
+    assert "Participants (1)" in output
+    assert "Beta" in output
+    assert "Priest" in output
+    assert "Alpha" not in output
 
 
 def test_load_error_is_presented_and_controls_are_restored(qtbot) -> None:

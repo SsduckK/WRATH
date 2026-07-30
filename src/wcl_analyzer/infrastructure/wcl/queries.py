@@ -11,6 +11,15 @@ query ReportWithFights($code: String!) {
         name
         startTime
         endTime
+        friendlyPlayers
+      }
+      masterData {
+        actors(type: "Player") {
+          id
+          name
+          type
+          subType
+        }
       }
     }
   }
