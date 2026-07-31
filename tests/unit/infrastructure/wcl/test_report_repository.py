@@ -8,7 +8,10 @@ import pytest
 
 from wcl_analyzer.app import ReportService
 from wcl_analyzer.infrastructure.wcl import WclReportRepository, WclRepositoryError
-from wcl_analyzer.infrastructure.wcl.queries import REPORT_WITH_FIGHTS_QUERY
+from wcl_analyzer.infrastructure.wcl.queries import (
+    FIGHT_PLAYER_STATS_QUERY,
+    REPORT_WITH_FIGHTS_QUERY,
+)
 
 FIXTURE_PATH = (
     Path(__file__).parents[3] / "fixtures" / "wcl" / "report_with_fights.json"
@@ -75,3 +78,30 @@ def test_get_report_rejects_mismatched_response_code() -> None:
 
     with pytest.raises(WclRepositoryError, match="does not match"):
         repository.get_report("FakeReport123")
+
+
+def test_get_fight_player_stats_requests_only_selected_fight() -> None:
+    report = (
+        ReportService(WclReportRepository(FakeGraphqlClient(load_fixture())))
+        .load_report("FakeReport123")
+        .report
+    )
+    fight = report.fights[0]
+    payload = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "damage": {"data": {"entries": [{"id": 101, "total": 60_000}]}}
+                }
+            }
+        }
+    }
+    client = FakeGraphqlClient(payload)
+    repository = WclReportRepository(client)
+
+    result = repository.get_fight_player_stats(report, fight)
+
+    assert client.queries == [FIGHT_PLAYER_STATS_QUERY]
+    assert client.variables == [{"code": "FakeReport123", "fightIDs": [1]}]
+    assert result.get_player(101) is not None
+    assert result.get_player(101).dps == 1_000  # type: ignore[union-attr]

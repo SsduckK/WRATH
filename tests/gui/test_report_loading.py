@@ -6,7 +6,13 @@ from wcl_analyzer.app import (
     ApiRateLimitStatus,
     ReportLoadResult,
 )
-from wcl_analyzer.domain import Actor, Fight, Report
+from wcl_analyzer.domain import (
+    Actor,
+    Fight,
+    FightPlayerStats,
+    PlayerFightStats,
+    Report,
+)
 from wcl_analyzer.gui.main_window import MainWindow
 
 
@@ -22,6 +28,7 @@ class FakeReportLoader:
         self.error = error
         self.inputs: list[str] = []
         self.thread: QThread | None = None
+        self.stats_thread: QThread | None = None
 
     def load_report(self, report_input: str) -> ReportLoadResult:
         self.inputs.append(report_input)
@@ -30,6 +37,28 @@ class FakeReportLoader:
             raise self.error
         assert self.result is not None
         return self.result
+
+    def load_fight_player_stats(
+        self,
+        report: Report,
+        fight: Fight,
+    ) -> FightPlayerStats:
+        self.stats_thread = QThread.currentThread()
+        return FightPlayerStats(
+            report_code=report.code,
+            fight_id=fight.id,
+            players=(
+                PlayerFightStats(
+                    actor_id=102,
+                    specialization="Holy",
+                    item_level=630.5,
+                    damage=1_200_000,
+                    dps=10_000.0,
+                    healing=60_000,
+                    hps=500.0,
+                ),
+            ),
+        )
 
 
 def make_report() -> Report:
@@ -88,21 +117,17 @@ def test_load_report_populates_fight_combo_from_worker_thread(qtbot, qapp) -> No
     window = MainWindow(loader)
     qtbot.addWidget(window)
     window.show()
-    window.report_input.setText(
-        "https://www.warcraftlogs.com/reports/FakeReport123"
-    )
+    window.report_input.setText("https://www.warcraftlogs.com/reports/FakeReport123")
 
     qtbot.mouseClick(window.load_button, Qt.MouseButton.LeftButton)
 
     qtbot.waitUntil(lambda: window.fight_combo.count() == 2)
     qtbot.waitUntil(window.load_button.isEnabled)
 
-    assert loader.inputs == [
-        "https://www.warcraftlogs.com/reports/FakeReport123"
-    ]
+    assert loader.inputs == ["https://www.warcraftlogs.com/reports/FakeReport123"]
     assert loader.thread is not qapp.thread()
     assert window.fight_combo.isEnabled()
-    assert window.fight_combo.itemText(0) == "1. First Encounter (60.0초)"
+    assert window.fight_combo.itemText(0) == "1. First Encounter (01.00.000)"
     assert window.fight_combo.itemData(1) == make_report().fights[1]
     assert "2개 전투" in window.status_label.text()
     assert "3,482.5 / 3,600" in window.rate_limit_label.text()
@@ -128,7 +153,11 @@ def test_user_fight_selection_prints_selected_fight(qtbot, capsys) -> None:
     assert "Alpha" not in output
 
 
-def test_player_list_updates_and_click_prints_player(qtbot, capsys) -> None:
+def test_player_click_displays_known_details_and_missing_values(
+    qtbot,
+    qapp,
+    capsys,
+) -> None:
     window = MainWindow(FakeReportLoader(result=make_result()))
     qtbot.addWidget(window)
     window.report_input.setText("FakeReport123")
@@ -145,6 +174,14 @@ def test_player_list_updates_and_click_prints_player(qtbot, capsys) -> None:
     window.participant_table.clicked.emit(model.index(0, 0))
 
     assert capsys.readouterr().out == "player{Beta} clicked\n"
+    qtbot.waitUntil(lambda: "1,200,000" in window.player_detail_label.text())
+    assert window.player_detail_label.text() == (
+        "name: Beta,  class: Priest-Holy, item level: 630.5\n"
+        "Damage: 1,200,000, DPS: 10,000.0\n"
+        "Healing: 60,000, HPS: 500.0\n"
+        "Death Time: None"
+    )
+    assert window._report_loader.stats_thread is not qapp.thread()
 
 
 def test_load_error_is_presented_and_controls_are_restored(qtbot) -> None:

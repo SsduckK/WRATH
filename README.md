@@ -54,7 +54,14 @@ fight selector, and load status are grouped at the top. The lower content is
 split into a large analysis-output area on the left and a smaller player/filter
 area on the right; code-driven presentation values are centralized in
 `gui/gui_config.py`. Their initial ratio is 80:20, and the splitter handle can
-be dragged to resize both areas.
+be dragged to resize both areas. Clicking a player displays the known name and
+class immediately, then loads only the selected fight's summary, damage,
+healing, and death tables on a worker thread. The mapped result is cached per
+fight. DPS is calculated as total damage divided by fight duration in seconds;
+HPS is calculated from total healing using the same duration. WCL
+report-relative death timestamps are normalized to elapsed fight time and
+displayed as `MM.SS.mmm`. Fight durations use the same format; values WCL does
+not provide are shown as `None`.
 
 ## Source layout
 

@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 )
 
 from wcl_analyzer.domain import Actor, Fight
+from wcl_analyzer.gui.formatters import format_elapsed_ms
 from wcl_analyzer.gui.gui_config import (
     PARTICIPANT_FONT_POINT_SIZE,
     PARTICIPANT_ROW_HEIGHT,
@@ -87,8 +88,7 @@ class FightSelector(QComboBox):
 
     @staticmethod
     def _format_fight(fight: Fight) -> str:
-        duration_seconds = fight.duration_ms / 1_000
-        return f"{fight.id}. {fight.name} ({duration_seconds:.1f}초)"
+        return f"{fight.id}. {fight.name} ({format_elapsed_ms(fight.duration_ms)})"
 
 
 class ParticipantTableView(QTableView):
@@ -101,18 +101,12 @@ class ParticipantTableView(QTableView):
         self.setObjectName("participantTable")
         self._participant_model = ParticipantTableModel()
         self.setModel(self._participant_model)
-        self.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
-        )
-        self.setSelectionMode(
-            QAbstractItemView.SelectionMode.SingleSelection
-        )
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.verticalHeader().setVisible(False)
         self.verticalHeader().setDefaultSectionSize(PARTICIPANT_ROW_HEIGHT)
-        self.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         participant_font = self.font()
         participant_font.setPointSize(PARTICIPANT_FONT_POINT_SIZE)
         self.setFont(participant_font)

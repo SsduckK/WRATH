@@ -28,9 +28,7 @@ def map_rate_limit_response(
     if limit_per_hour <= 0:
         raise WclMappingError("rateLimitData.limitPerHour must be positive")
     if points_spent < 0:
-        raise WclMappingError(
-            "rateLimitData.pointsSpentThisHour must not be negative"
-        )
+        raise WclMappingError("rateLimitData.pointsSpentThisHour must not be negative")
     if reset_in_seconds < 0:
         raise WclMappingError("rateLimitData.pointsResetIn must not be negative")
 

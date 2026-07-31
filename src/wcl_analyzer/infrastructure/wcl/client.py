@@ -86,9 +86,27 @@ class WclGraphqlClient:
             )
 
         payload = self._decode_response(response)
-        if payload.get("errors"):
-            raise WclGraphqlError("WCL GraphQL response contains errors")
+        errors = payload.get("errors")
+        if errors:
+            raise WclGraphqlError(self._format_graphql_errors(errors))
         return payload
+
+    @staticmethod
+    def _format_graphql_errors(errors: object) -> str:
+        """Expose safe GraphQL messages without logging request credentials."""
+        messages: list[str] = []
+        if isinstance(errors, list):
+            for error in errors:
+                if isinstance(error, Mapping):
+                    message = error.get("message")
+                    if isinstance(message, str) and message.strip():
+                        messages.append(message.strip())
+        detail = "; ".join(messages)
+        return (
+            f"WCL GraphQL response contains errors: {detail}"
+            if detail
+            else "WCL GraphQL response contains errors"
+        )
 
     def _send(
         self,

@@ -105,7 +105,7 @@ def test_execute_rejects_graphql_errors_on_http_200() -> None:
         session=session,  # type: ignore[arg-type]
     )
 
-    with pytest.raises(WclGraphqlError, match="contains errors"):
+    with pytest.raises(WclGraphqlError, match="Report not found"):
         client.execute(query="query Test {}", variables={})
 
 

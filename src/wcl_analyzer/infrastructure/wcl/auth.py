@@ -94,9 +94,7 @@ class WclTokenProvider:
         token_value = payload.get("access_token")
         expires_in = payload.get("expires_in")
         if not isinstance(token_value, str) or not token_value:
-            raise WclAuthenticationError(
-                "WCL token response is missing access_token"
-            )
+            raise WclAuthenticationError("WCL token response is missing access_token")
         if (
             isinstance(expires_in, bool)
             or not isinstance(expires_in, int | float)
@@ -127,8 +125,7 @@ class WclTokenProvider:
         remaining_seconds = max(0, int(token.expires_at - self._clock()))
         return TokenStatus(
             available=remaining_seconds > TOKEN_REFRESH_MARGIN_SECONDS,
-            expires_at=self._wall_clock()
-            + timedelta(seconds=remaining_seconds),
+            expires_at=self._wall_clock() + timedelta(seconds=remaining_seconds),
             remaining_seconds=remaining_seconds,
         )
 

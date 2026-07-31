@@ -20,19 +20,11 @@ class ParticipantTableModel(QAbstractTableModel):
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
         """Return the number of participant rows."""
-        return (
-            0
-            if parent is not None and parent.isValid()
-            else len(self._participants)
-        )
+        return 0 if parent is not None and parent.isValid() else len(self._participants)
 
     def columnCount(self, parent: QModelIndex | None = None) -> int:
         """Return the number of participant columns."""
-        return (
-            0
-            if parent is not None and parent.isValid()
-            else len(self._HEADERS)
-        )
+        return 0 if parent is not None and parent.isValid() else len(self._HEADERS)
 
     def data(
         self,

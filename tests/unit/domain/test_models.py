@@ -2,7 +2,13 @@
 
 import pytest
 
-from wcl_analyzer.domain import Actor, Fight, Report
+from wcl_analyzer.domain import (
+    Actor,
+    Fight,
+    FightPlayerStats,
+    PlayerFightStats,
+    Report,
+)
 
 
 def test_fight_exposes_report_relative_duration() -> None:
@@ -131,3 +137,20 @@ def test_report_resolves_fight_participants_in_fight_order() -> None:
         second_actor,
         first_actor,
     )
+
+
+def test_fight_player_stats_resolves_player_by_actor_id() -> None:
+    player = PlayerFightStats(
+        actor_id=101,
+        specialization="Arms",
+        damage=125_000,
+        dps=1_250.0,
+    )
+    fight_stats = FightPlayerStats(
+        report_code="ABC123",
+        fight_id=1,
+        players=(player,),
+    )
+
+    assert fight_stats.get_player(101) is player
+    assert fight_stats.get_player(999) is None

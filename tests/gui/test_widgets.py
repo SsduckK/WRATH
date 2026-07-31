@@ -60,7 +60,7 @@ def test_fight_selector_stores_models_and_emits_selection(qtbot) -> None:
     selector.activated.emit(0)
 
     assert selector.isEnabled()
-    assert selector.itemText(0) == "3. Test Encounter (60.0초)"
+    assert selector.itemText(0) == "3. Test Encounter (01.00.000)"
     assert selector.itemData(0) is fight
     assert selected == [fight]
 
@@ -85,7 +85,5 @@ def test_participant_table_displays_and_emits_clicked_actor(qtbot) -> None:
     assert model.rowCount() == 1
     assert model.columnCount() == 1
     assert model.data(first_cell) == "Alpha"
-    assert model.data(first_cell, Qt.ItemDataRole.BackgroundRole) == QColor(
-        "#C69B6D"
-    )
+    assert model.data(first_cell, Qt.ItemDataRole.BackgroundRole) == QColor("#C69B6D")
     assert clicked == [actor]

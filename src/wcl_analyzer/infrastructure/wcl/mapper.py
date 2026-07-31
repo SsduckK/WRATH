@@ -104,7 +104,9 @@ def _required_mapping(
     field: str,
     location: str,
 ) -> Mapping[str, object]:
-    return _as_mapping(_required_value(container, field, location), f"{location}.{field}")
+    return _as_mapping(
+        _required_value(container, field, location), f"{location}.{field}"
+    )
 
 
 def _as_mapping(value: object, location: str) -> Mapping[str, object]:
@@ -155,9 +157,7 @@ def _required_millisecond(
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise WclMappingError(f"{location}.{field} must be a number")
     if not isfinite(value) or not float(value).is_integer():
-        raise WclMappingError(
-            f"{location}.{field} must be a whole millisecond value"
-        )
+        raise WclMappingError(f"{location}.{field} must be a whole millisecond value")
     return int(value)
 
 
@@ -175,9 +175,7 @@ def _optional_int_tuple(
     values: list[int] = []
     for item in value:
         if isinstance(item, bool) or not isinstance(item, int):
-            raise WclMappingError(
-                f"{location}.{field} must contain only integers"
-            )
+            raise WclMappingError(f"{location}.{field} must contain only integers")
         values.append(item)
     return tuple(values)
 

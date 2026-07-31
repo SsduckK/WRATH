@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from wcl_analyzer.app.errors import InvalidReportInputError
 from wcl_analyzer.app.models import ReportLoadResult
 from wcl_analyzer.app.ports import ReportRepository
+from wcl_analyzer.domain import Fight, FightPlayerStats, Report
 
 _WCL_HOST = "warcraftlogs.com"
 
@@ -54,3 +55,11 @@ class ReportService:
         """Load report metadata for a code or Warcraft Logs URL."""
         report_code = normalize_report_code(report_input)
         return self._repository.get_report(report_code)
+
+    def load_fight_player_stats(
+        self,
+        report: Report,
+        fight: Fight,
+    ) -> FightPlayerStats:
+        """Load aggregate values for only the selected fight."""
+        return self._repository.get_fight_player_stats(report, fight)

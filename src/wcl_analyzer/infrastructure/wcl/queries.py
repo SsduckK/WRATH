@@ -30,3 +30,16 @@ query ReportWithFights($code: String!) {
   }
 }
 """
+
+FIGHT_PLAYER_STATS_QUERY = """
+query FightPlayerStats($code: String!, $fightIDs: [Int]) {
+  reportData {
+    report(code: $code) {
+      summary: table(dataType: Summary, fightIDs: $fightIDs)
+      damage: table(dataType: DamageDone, fightIDs: $fightIDs)
+      healing: table(dataType: Healing, fightIDs: $fightIDs)
+      deaths: table(dataType: Deaths, fightIDs: $fightIDs)
+    }
+  }
+}
+"""
