@@ -48,7 +48,13 @@ also shows the latest WCL API point balance returned with the report query.
 The reset countdown updates locally and does not make additional API requests.
 Selecting a fight displays its friendly players in a table resolved from WCL
 report master data. Clicking a player row prints the selected player name to
-the development console.
+the development console. Player rows use the class information retained in the
+domain model to apply WoW class colors. The report input, API point status,
+fight selector, and load status are grouped at the top. The lower content is
+split into a large analysis-output area on the left and a smaller player/filter
+area on the right; code-driven presentation values are centralized in
+`gui/gui_config.py`. Their initial ratio is 80:20, and the splitter handle can
+be dragged to resize both areas.
 
 ## Source layout
 

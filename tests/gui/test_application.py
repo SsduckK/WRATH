@@ -1,6 +1,6 @@
 """Smoke tests for the initial PyQt application shell."""
 
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QFrame, QGroupBox, QLabel, QSplitter
 
 from wcl_analyzer.app import ReportLoadResult
 from wcl_analyzer.domain import Report
@@ -30,7 +30,18 @@ def test_main_window_has_initial_state(qtbot) -> None:
     qtbot.addWidget(window)
 
     assert window.windowTitle() == "WRATH"
-    assert window.findChild(QLabel, "titleLabel").text() == "WRATH"
+    assert window.findChild(QLabel, "titleLabel") is None
     assert "입력" in window.findChild(QLabel, "statusLabel").text()
     assert "조회 전" in window.rate_limit_label.text()
     assert not window.fight_combo.isEnabled()
+    assert window.findChild(QGroupBox, "reportLoadArea") is not None
+    assert window.findChild(QFrame, "interactionOutputArea") is not None
+    assert window.findChild(QFrame, "playerFilterArea") is not None
+    assert window.findChild(QSplitter, "contentSplitter").count() == 2
+    assert window.content_splitter.widget(0) is window.interaction_output_area
+    assert window.content_splitter.widget(1) is window.player_filter_area
+
+    window.show()
+    qtbot.waitUntil(lambda: sum(window.content_splitter.sizes()) > 0)
+    output_width, player_width = window.content_splitter.sizes()
+    assert output_width > player_width

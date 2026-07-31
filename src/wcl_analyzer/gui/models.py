@@ -3,14 +3,16 @@
 from collections.abc import Iterable
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
+from PyQt6.QtGui import QColor
 
 from wcl_analyzer.domain import Actor
+from wcl_analyzer.gui.gui_config import get_class_style
 
 
 class ParticipantTableModel(QAbstractTableModel):
     """Expose fight participants as a vertical table."""
 
-    _HEADERS = ("플레이어", "직업")
+    _HEADERS = ("플레이어",)
 
     def __init__(self) -> None:
         super().__init__()
@@ -44,12 +46,13 @@ class ParticipantTableModel(QAbstractTableModel):
         actor = self._participants[index.row()]
         if role == Qt.ItemDataRole.UserRole:
             return actor
-        if role != Qt.ItemDataRole.DisplayRole:
-            return QVariant()
-        if index.column() == 0:
+        if role == Qt.ItemDataRole.DisplayRole and index.column() == 0:
             return actor.name
-        if index.column() == 1:
-            return actor.sub_type or "-"
+        class_style = get_class_style(actor.sub_type)
+        if role == Qt.ItemDataRole.BackgroundRole:
+            return QColor(class_style.background)
+        if role == Qt.ItemDataRole.ForegroundRole:
+            return QColor(class_style.foreground)
         return QVariant()
 
     def headerData(

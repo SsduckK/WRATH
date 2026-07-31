@@ -4,10 +4,13 @@ from time import monotonic
 
 from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtWidgets import (
+    QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -19,6 +22,13 @@ from wcl_analyzer.app import (
 )
 from wcl_analyzer.domain import Actor, Fight, Report
 from wcl_analyzer.gui.actions import AppActions
+from wcl_analyzer.gui.gui_config import (
+    ANALYSIS_OUTPUT_AREA_WEIGHT,
+    CONTENT_SPLITTER_HANDLE_WIDTH,
+    DEFAULT_WINDOW_HEIGHT,
+    DEFAULT_WINDOW_WIDTH,
+    PLAYER_FILTER_AREA_WEIGHT,
+)
 from wcl_analyzer.gui.widgets import (
     AppButton,
     FightSelector,
@@ -41,14 +51,10 @@ class MainWindow(QMainWindow):
 
         self.setObjectName("mainWindow")
         self.setWindowTitle("WRATH")
-        self.resize(960, 640)
+        self.resize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
 
         self.actions = AppActions(self)
         self.actions.load_report.triggered.connect(self.load_report)
-
-        self.title_label = QLabel("WRATH")
-        self.title_label.setObjectName("titleLabel")
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.report_input = QLineEdit()
         self.report_input.setObjectName("reportInput")
@@ -80,13 +86,59 @@ class MainWindow(QMainWindow):
         self.rate_limit_label.setObjectName("rateLimitLabel")
         self.rate_limit_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
+        report_load_area = QGroupBox("로그 불러오기")
+        report_load_area.setObjectName("reportLoadArea")
+        report_load_layout = QVBoxLayout(report_load_area)
+        report_load_layout.addLayout(input_layout)
+        report_load_layout.addWidget(self.rate_limit_label)
+        report_load_layout.addWidget(self.fight_combo)
+        report_load_layout.addWidget(self.status_label)
+
+        self.interaction_output_area = QFrame()
+        self.interaction_output_area.setObjectName("interactionOutputArea")
+        self.interaction_output_area.setFrameShape(QFrame.Shape.StyledPanel)
+        self.interaction_output_layout = QVBoxLayout(
+            self.interaction_output_area
+        )
+        self.interaction_output_layout.addStretch(1)
+
+        self.player_filter_area = QFrame()
+        self.player_filter_area.setObjectName("playerFilterArea")
+        self.player_filter_area.setFrameShape(QFrame.Shape.StyledPanel)
+        player_filter_layout = QVBoxLayout(self.player_filter_area)
+        player_filter_layout.addWidget(self.participant_table)
+
+        self.content_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.content_splitter.setObjectName("contentSplitter")
+        self.content_splitter.addWidget(self.interaction_output_area)
+        self.content_splitter.addWidget(self.player_filter_area)
+        self.content_splitter.setChildrenCollapsible(False)
+        self.content_splitter.setHandleWidth(CONTENT_SPLITTER_HANDLE_WIDTH)
+        self.content_splitter.setStretchFactor(
+            0,
+            ANALYSIS_OUTPUT_AREA_WEIGHT,
+        )
+        self.content_splitter.setStretchFactor(
+            1,
+            PLAYER_FILTER_AREA_WEIGHT,
+        )
+        total_area_weight = (
+            ANALYSIS_OUTPUT_AREA_WEIGHT + PLAYER_FILTER_AREA_WEIGHT
+        )
+        self.content_splitter.setSizes(
+            [
+                DEFAULT_WINDOW_WIDTH
+                * ANALYSIS_OUTPUT_AREA_WEIGHT
+                // total_area_weight,
+                DEFAULT_WINDOW_WIDTH
+                * PLAYER_FILTER_AREA_WEIGHT
+                // total_area_weight,
+            ]
+        )
+
         layout = QVBoxLayout()
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.rate_limit_label)
-        layout.addLayout(input_layout)
-        layout.addWidget(self.fight_combo)
-        layout.addWidget(self.participant_table, 1)
-        layout.addWidget(self.status_label)
+        layout.addWidget(report_load_area)
+        layout.addWidget(self.content_splitter, 1)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)

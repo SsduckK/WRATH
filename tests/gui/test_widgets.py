@@ -1,5 +1,7 @@
 """Tests for common GUI widgets and actions."""
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget
 
 from wcl_analyzer.domain import Actor, Fight
@@ -81,6 +83,9 @@ def test_participant_table_displays_and_emits_clicked_actor(qtbot) -> None:
     table.clicked.emit(first_cell)
 
     assert model.rowCount() == 1
+    assert model.columnCount() == 1
     assert model.data(first_cell) == "Alpha"
-    assert model.data(model.index(0, 1)) == "Warrior"
+    assert model.data(first_cell, Qt.ItemDataRole.BackgroundRole) == QColor(
+        "#C69B6D"
+    )
     assert clicked == [actor]

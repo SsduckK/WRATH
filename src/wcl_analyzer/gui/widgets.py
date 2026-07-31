@@ -14,6 +14,10 @@ from PyQt6.QtWidgets import (
 )
 
 from wcl_analyzer.domain import Actor, Fight
+from wcl_analyzer.gui.gui_config import (
+    PARTICIPANT_FONT_POINT_SIZE,
+    PARTICIPANT_ROW_HEIGHT,
+)
 from wcl_analyzer.gui.models import ParticipantTableModel
 
 
@@ -105,9 +109,13 @@ class ParticipantTableView(QTableView):
         )
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.verticalHeader().setVisible(False)
+        self.verticalHeader().setDefaultSectionSize(PARTICIPANT_ROW_HEIGHT)
         self.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
+        participant_font = self.font()
+        participant_font.setPointSize(PARTICIPANT_FONT_POINT_SIZE)
+        self.setFont(participant_font)
         self.clicked.connect(self._emit_clicked_player)
 
     def set_participants(self, participants: Iterable[Actor]) -> None:
